@@ -2,14 +2,16 @@
 #ifndef PREFERENCES_MEDIA_H
 #define PREFERENCES_MEDIA_H
 
-#include <QMap>
 #include "abstractpreferenceswidget.h"
+#include <QMap>
 
-namespace Ui {
+namespace Ui
+{
 	class PreferencesMedia;
 }
 
-class PreferencesMedia : public AbstractPreferencesWidget {
+class PreferencesMedia : public AbstractPreferencesWidget
+{
 	Q_OBJECT
 public:
 	PreferencesMedia();
@@ -20,11 +22,11 @@ public slots:
 	void on_ffmpegFile_clicked();
 	void on_ffmpegExecutable_editingFinished();
 	void on_extractVideoThumbnails_toggled(bool toggled);
+	void on_connectGooglePhotos_clicked();
+
 private:
 	Ui::PreferencesMedia *ui;
 	void checkFfmpegExecutable();
-
 };
 
 #endif
-

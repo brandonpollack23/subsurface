@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0
 #include "preferences_media.h"
-#include "ui_preferences_media.h"
-#include "core/settings/qPrefMedia.h"
 #include "core/qthelper.h"
+#include "core/settings/qPrefMedia.h"
 #include "qt-models/models.h"
+#include "ui_preferences_media.h"
 
 #include <QApplication>
-#include <QMessageBox>
-#include <QSortFilterProxyModel>
+#include <QDebug>
 #include <QFileDialog>
+#include <QMessageBox>
 #include <QProcess>
+#include <QSortFilterProxyModel>
 
 PreferencesMedia::PreferencesMedia() : AbstractPreferencesWidget(tr("Media"), QIcon(":preferences-media-icon"), 6)
 {
@@ -82,4 +83,9 @@ void PreferencesMedia::syncSettings()
 	media->set_extract_video_thumbnails_position(ui->videoThumbnailPosition->value());
 	media->set_ffmpeg_executable(ui->ffmpegExecutable->text());
 	qPrefMedia::set_auto_recalculate_thumbnails(ui->auto_recalculate_thumbnails->isChecked());
+}
+
+void PreferencesMedia::on_connectGooglePhotos_clicked()
+{
+	qDebug() << "That tickled";
 }
