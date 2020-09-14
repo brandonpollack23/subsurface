@@ -181,8 +181,9 @@
     </widget>
    </item>
 
-<!-- TODO:
+<!-- TODO NOW:
 * Enable/Disable buttons based on connection state
+* Show gmail account associated in UI.
 * Disconnect Google Photos button
 * after connecting save token (encrypt?)
 * In media view if google photos connected then fetch (SIMPLY, save thumbnails and complex caching of data for later) -->

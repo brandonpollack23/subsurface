@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
 #include "preferences_media.h"
+#include "core/googlephotoswrapper.h"
 #include "core/qthelper.h"
 #include "core/settings/qPrefMedia.h"
 #include "qt-models/models.h"
@@ -63,6 +64,20 @@ void PreferencesMedia::on_extractVideoThumbnails_toggled(bool toggled)
 	ui->ffmpegFile->setEnabled(toggled);
 }
 
+void PreferencesMedia::on_connectGooglePhotos_clicked()
+{
+	ui->connectGooglePhotos->setEnabled(false);
+
+	GooglePhotosWrapper *googlePhotos = GooglePhotosWrapper::instance();
+	googlePhotos->grantAuthentication();
+	connect(googlePhotos, &GooglePhotosWrapper::authenticationFailed, [&]() {
+		ui->connectGooglePhotos->setEnabled(true);
+	});
+	connect(googlePhotos, &GooglePhotosWrapper::authenticated, [&]() {
+		// TODO NOW enable disconnect button.
+	});
+}
+
 void PreferencesMedia::refreshSettings()
 {
 	ui->videoThumbnailPosition->setEnabled(qPrefMedia::extract_video_thumbnails());
@@ -74,6 +89,8 @@ void PreferencesMedia::refreshSettings()
 	ui->ffmpegExecutable->setText(qPrefMedia::ffmpeg_executable());
 
 	ui->auto_recalculate_thumbnails->setChecked(prefs.auto_recalculate_thumbnails);
+
+	ui->connectGooglePhotos->setEnabled(GooglePhotosWrapper::instance()->isAuthenticated());
 }
 
 void PreferencesMedia::syncSettings()
@@ -82,10 +99,6 @@ void PreferencesMedia::syncSettings()
 	media->set_extract_video_thumbnails(ui->extractVideoThumbnails->isChecked());
 	media->set_extract_video_thumbnails_position(ui->videoThumbnailPosition->value());
 	media->set_ffmpeg_executable(ui->ffmpegExecutable->text());
+	media->set_google_photos_token(GooglePhotosWrapper::instance()->token());
 	qPrefMedia::set_auto_recalculate_thumbnails(ui->auto_recalculate_thumbnails->isChecked());
-}
-
-void PreferencesMedia::on_connectGooglePhotos_clicked()
-{
-	qDebug() << "That tickled";
 }
