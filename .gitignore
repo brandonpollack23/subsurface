@@ -1,3 +1,4 @@
+api_keys.h
 translations/*.qm
 *.o
 *.orig
@@ -13,6 +14,7 @@ po/*.mo
 /subsurface
 /*.tar.gz
 share/
+cmake-build-debug
 Documentation/docbook-xsl.css
 Documentation/user-manual*.html
 Documentation/user-manual*.pdf
@@ -41,3 +43,5 @@ packaging/ios/Info.plist
 packaging/ios/Qt
 packaging/ios/asset_catalog_compiler.Info.plist
 appdata/subsurface.appdata.xml
+.idea
+.vscode

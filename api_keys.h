@@ -1,0 +1,7 @@
+#ifndef API_KEYS_H
+#define API_KEYS_H
+
+#define GOOGLE_PHOTOS_CLIENT_ID "FILL_IN"
+#define GOOGLE_PHOTOS_API_KEY "FILL_IN"
+
+#endif
