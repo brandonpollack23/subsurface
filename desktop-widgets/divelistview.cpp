@@ -5,36 +5,37 @@
  * classes for the divelist of Subsurface
  *
  */
-#include "qt-models/filtermodels.h"
-#include "desktop-widgets/modeldelegates.h"
-#include "desktop-widgets/mainwindow.h"
-#include "desktop-widgets/divepicturewidget.h"
-#include "core/selection.h"
+#include "desktop-widgets/divelistview.h"
+#include "commands/command.h"
 #include "core/divefilter.h"
 #include "core/divesite.h" // for dive_site_table. TODO: remove once adding pictures is undoified
-#include <unistd.h>
-#include <QSettings>
-#include <QKeyEvent>
+#include "core/errorhelper.h"
+#include "core/googlephotoswrapper.h"
+#include "core/metrics.h"
+#include "core/qthelper.h"
+#include "core/selection.h"
+#include "core/trip.h"
+#include "desktop-widgets/divepicturewidget.h"
+#include "desktop-widgets/mainwindow.h"
+#include "desktop-widgets/mapwidget.h"
+#include "desktop-widgets/modeldelegates.h"
+#include "desktop-widgets/simplewidgets.h"
+#include "qt-models/divepicturemodel.h"
+#include "qt-models/filtermodels.h"
 #include <QFileDialog>
+#include <QHeaderView>
+#include <QKeyEvent>
+#include <QMessageBox>
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
+#include <QSettings>
 #include <QStandardPaths>
-#include <QMessageBox>
-#include <QHeaderView>
-#include "commands/command.h"
-#include "core/errorhelper.h"
-#include "core/qthelper.h"
-#include "core/trip.h"
-#include "desktop-widgets/divelistview.h"
-#include "qt-models/divepicturemodel.h"
-#include "core/metrics.h"
-#include "desktop-widgets/simplewidgets.h"
-#include "desktop-widgets/mapwidget.h"
+#include <unistd.h>
 
 DiveListView::DiveListView(QWidget *parent) : QTreeView(parent),
-	currentLayout(DiveTripModelBase::TREE),
-	initialColumnWidths(DiveTripModelBase::COLUMNS, 50),	// Set up with default length 50
-	programmaticalSelectionChange(false)
+					      currentLayout(DiveTripModelBase::TREE),
+					      initialColumnWidths(DiveTripModelBase::COLUMNS, 50), // Set up with default length 50
+					      programmaticalSelectionChange(false)
 {
 	setItemDelegate(new DiveListDelegate(this));
 	setUniformRowHeights(true);
@@ -63,6 +64,14 @@ DiveListView::DiveListView(QWidget *parent) : QTreeView(parent),
 	for (int i = DiveTripModelBase::NR; i < DiveTripModelBase::COLUMNS; i++)
 		calculateInitialColumnWidth(i);
 	setColumnWidths();
+
+	// Google photos setup.
+	// TODO NOW ensure called appropriately (first time subsequent times etc)
+	auto *googlePhotosWrapper = GooglePhotosWrapper::instance();
+	connect(googlePhotosWrapper,
+		&GooglePhotosWrapper::authenticated,
+		this,
+		&DiveListView::loadWebImagesFromGooglePhotos);
 }
 
 DiveListView::~DiveListView()
@@ -107,29 +116,29 @@ void DiveListView::calculateInitialColumnWidth(int col)
 	switch (col) {
 	case DiveTripModelBase::NR:
 	case DiveTripModelBase::DURATION:
-		sw = 8*zw;
+		sw = 8 * zw;
 		break;
 	case DiveTripModelBase::DATE:
-		sw = 14*em;
+		sw = 14 * em;
 		break;
 	case DiveTripModelBase::RATING:
-		sw = static_cast<StarWidgetsDelegate*>(itemDelegateForColumn(col))->starSize().width();
+		sw = static_cast<StarWidgetsDelegate *>(itemDelegateForColumn(col))->starSize().width();
 		break;
 	case DiveTripModelBase::SUIT:
 	case DiveTripModelBase::SAC:
-		sw = 7*em;
+		sw = 7 * em;
 		break;
 	case DiveTripModelBase::PHOTOS:
-		sw = 5*em;
+		sw = 5 * em;
 		break;
 	case DiveTripModelBase::BUDDIES:
-		sw = 50*em;
+		sw = 50 * em;
 		break;
 	case DiveTripModelBase::LOCATION:
-		sw = 50*em;
+		sw = 50 * em;
 		break;
 	default:
-		sw = 5*em;
+		sw = 5 * em;
 	}
 	if (sw > width)
 		width = sw;
@@ -182,7 +191,7 @@ std::vector<int> DiveListView::backupExpandedRows()
 void DiveListView::restoreExpandedRows(const std::vector<int> &expandedRows)
 {
 	setAnimated(false);
-	for (int i: expandedRows)
+	for (int i : expandedRows)
 		setExpanded(model()->index(i, 0), true);
 	setAnimated(true);
 }
@@ -210,13 +219,13 @@ void DiveListView::diveSelectionChanged(const QVector<QModelIndex> &indices)
 
 	clearSelection();
 	QItemSelection selection;
-	for (const QModelIndex &index: indices)
+	for (const QModelIndex &index : indices)
 		selection.select(index, index); // Is there a faster way to do this?
 	selectionModel()->select(selection, QItemSelectionModel::Rows | QItemSelectionModel::Select);
 
 	// Expand all unexpanded trips
 	std::vector<int> affectedTrips;
-	for (const QModelIndex &index: indices) {
+	for (const QModelIndex &index : indices) {
 		if (!index.parent().isValid())
 			continue;
 		int row = index.parent().row();
@@ -224,7 +233,7 @@ void DiveListView::diveSelectionChanged(const QVector<QModelIndex> &indices)
 			affectedTrips.push_back(row);
 	}
 	MultiFilterSortModel *m = MultiFilterSortModel::instance();
-	for (int row: affectedTrips) {
+	for (int row : affectedTrips) {
 		QModelIndex idx = m->index(row, 0);
 		expand(idx);
 	}
@@ -320,7 +329,7 @@ void DiveListView::sortIndicatorChanged(int i, Qt::SortOrder order)
 	} else {
 		// clear the model, repopulate with new indices.
 		std::vector<int> expandedRows;
-		if(currentLayout == DiveTripModelBase::TREE)
+		if (currentLayout == DiveTripModelBase::TREE)
 			expandedRows = backupExpandedRows();
 		currentLayout = newLayout;
 		resetModel();
@@ -422,7 +431,7 @@ void DiveListView::toggleColumnVisibilityByIndex()
 	setColumnWidth(lastVisibleColumn(), 10);
 }
 
-void DiveListView::currentChanged(const QModelIndex &current, const QModelIndex&)
+void DiveListView::currentChanged(const QModelIndex &current, const QModelIndex &)
 {
 	if (!isVisible())
 		return;
@@ -506,7 +515,7 @@ void DiveListView::selectionChangeDone()
 		selectedSites.reserve(amount_selected);
 		int i;
 		dive *d;
-		for_each_dive(i, d) {
+		for_each_dive (i, d) {
 			if (d->selected && !d->hidden_by_filter && d->dive_site && !selectedSites.contains(d->dive_site))
 				selectedSites.push_back(d->dive_site);
 		}
@@ -572,7 +581,9 @@ void DiveListView::selectionChanged(const QItemSelection &selected, const QItemS
 	QTreeView::selectionChanged(selectionModel()->selection(), newDeselected);
 }
 
-enum asked_user {NOTYET, MERGE, DONTMERGE};
+enum asked_user { NOTYET,
+		  MERGE,
+		  DONTMERGE };
 
 static bool can_merge(const struct dive *a, const struct dive *b, enum asked_user *have_asked)
 {
@@ -585,9 +596,8 @@ static bool can_merge(const struct dive *a, const struct dive *b, enum asked_use
 		if (*have_asked == NOTYET) {
 			if (QMessageBox::warning(MainWindow::instance(),
 						 MainWindow::tr("Warning"),
-						 MainWindow::tr("Trying to merge dives with %1min interval in between").arg(
-							 (b->when - dive_endtime(a)) / 60),
-					     QMessageBox::Ok | QMessageBox::Cancel) == QMessageBox::Cancel) {
+						 MainWindow::tr("Trying to merge dives with %1min interval in between").arg((b->when - dive_endtime(a)) / 60),
+						 QMessageBox::Ok | QMessageBox::Cancel) == QMessageBox::Cancel) {
 				*have_asked = DONTMERGE;
 				return false;
 			} else {
@@ -626,7 +636,7 @@ void DiveListView::mergeDives()
 	if (current_batch.count() > 1)
 		merge_batches.append(current_batch);
 
-	for (const QVector<dive *> &batch: merge_batches)
+	for (const QVector<dive *> &batch : merge_batches)
 		Command::mergeDives(batch);
 }
 
@@ -641,7 +651,7 @@ void DiveListView::splitDives()
 		if (dive->selected)
 			dives.append(dive);
 	}
-	for (struct dive *d: dives)
+	for (struct dive *d : dives)
 		Command::splitDives(d, duration_t{-1});
 }
 
@@ -722,7 +732,7 @@ void DiveListView::addToTrip(int delta)
 	// now look for the trip to add to, for this, loop over the selected dives and
 	// check if its sibling is a trip.
 	for (int i = 1; i <= nr; i++) {
-		t = contextMenuIndex.sibling(contextMenuIndex.row() + (delta > 0 ? i: i * -1), 0);
+		t = contextMenuIndex.sibling(contextMenuIndex.row() + (delta > 0 ? i : i * -1), 0);
 		trip = t.data(DiveTripModelBase::TRIP_ROLE).value<dive_trip *>();
 		if (trip)
 			break;
@@ -760,7 +770,7 @@ void DiveListView::deleteDive()
 		return;
 
 	int i;
-	QVector<struct dive*> deletedDives;
+	QVector<struct dive *> deletedDives;
 	for_each_dive (i, d) {
 		if (d->selected)
 			deletedDives.append(d);
@@ -781,7 +791,7 @@ void DiveListView::contextMenuEvent(QContextMenuEvent *event)
 		bool needs_expand = false;
 		bool needs_collapse = false;
 		uint expanded_nodes = 0;
-		for(int i = 0, end = model()->rowCount(); i < end; i++) {
+		for (int i = 0, end = model()->rowCount(); i < end; i++) {
 			QModelIndex idx = model()->index(i, 0);
 			if (idx.data(DiveTripModelBase::DIVE_ROLE).value<struct dive *>())
 				continue;
@@ -790,7 +800,7 @@ void DiveListView::contextMenuEvent(QContextMenuEvent *event)
 				needs_expand = true;
 			} else {
 				needs_collapse = true;
-				expanded_nodes ++;
+				expanded_nodes++;
 			}
 		}
 		if (needs_expand)
@@ -873,10 +883,7 @@ void DiveListView::loadImages()
 							      tr("Open media files"),
 							      lastUsedImageDir(),
 							      QString("%1 (%2);;%3 (%4);;%5 (%6);;%7 (*.*)")
-							      .arg(tr("Media files"), m_filters.join(" ")
-							      , tr("Image files"), i_filters.join(" ")
-							      , tr("Video files"), v_filters.join(" ")
-							      , tr("All files")));
+								      .arg(tr("Media files"), m_filters.join(" "), tr("Image files"), i_filters.join(" "), tr("Video files"), v_filters.join(" "), tr("All files")));
 
 	if (fileNames.isEmpty())
 		return;
@@ -894,7 +901,7 @@ void DiveListView::matchImagesToDives(QStringList fileNames)
 
 	// Create the data structure of pictures to be added: a list of pictures per dive.
 	std::vector<Command::PictureListForAddition> pics;
-	for (const QString &fileName: fileNames) {
+	for (const QString &fileName : fileNames) {
 		struct dive *d;
 		picture *pic = create_picture(qPrintable(fileName), shiftDialog.amount(), shiftDialog.matchAll(), &d);
 		if (!pic)
@@ -904,7 +911,7 @@ void DiveListView::matchImagesToDives(QStringList fileNames)
 
 		auto it = std::find_if(pics.begin(), pics.end(), [d](const Command::PictureListForAddition &l) { return l.d == d; });
 		if (it == pics.end())
-			pics.push_back(Command::PictureListForAddition { d, { pObj } });
+			pics.push_back(Command::PictureListForAddition{d, {pObj}});
 		else
 			it->pics.push_back(pObj);
 	}
@@ -921,6 +928,26 @@ void DiveListView::loadWebImages()
 	if (!urlDialog.exec())
 		return;
 	loadImageFromURL(QUrl::fromUserInput(urlDialog.url()));
+}
+
+void DiveListView::loadWebImagesFromGooglePhotos()
+{
+	// TODO NOW ignore images that already exist.
+	auto *googlePhotosWrapper = GooglePhotosWrapper::instance();
+
+	int i;
+	dive *d;
+	for_each_dive (i, d) {
+		// QDateTime startDateTime = QDateTime::fromMSecsSinceEpoch(d->when);
+		// QDateTime endDateTime = QDateTime::fromMSecsSinceEpoch(d->when + (d->duration.seconds * 1000));
+		// TODO NOW remove
+		QDateTime startDateTime = QDateTime::fromString("2020-09-09", Qt::ISODate);
+		QDateTime endDateTime = QDateTime::fromString("2020-09-09", Qt::ISODate);
+		qDebug() << "Fetching for dive, starting at " << startDateTime << " ending at " << endDateTime;
+
+		// TODO iterate
+		auto json_photos = googlePhotosWrapper->requestPhotosFromTimespan(startDateTime, endDateTime);
+	}
 }
 
 void DiveListView::loadImageFromURL(QUrl url)
@@ -999,7 +1026,7 @@ void DiveListView::updateLastImageTimeOffset(const int offset)
 	s.setValue("LastImageTimeOffset", offset);
 }
 
-void DiveListView::mouseDoubleClickEvent(QMouseEvent*)
+void DiveListView::mouseDoubleClickEvent(QMouseEvent *)
 {
 	return;
 }

@@ -66,6 +66,8 @@ void PreferencesMedia::on_extractVideoThumbnails_toggled(bool toggled)
 
 void PreferencesMedia::on_connectGooglePhotos_clicked()
 {
+	// TODO NOW remove
+	qDebug() << "connect google photos clicked";
 	ui->connectGooglePhotos->setEnabled(false);
 
 	GooglePhotosWrapper *googlePhotos = GooglePhotosWrapper::instance();
@@ -90,7 +92,7 @@ void PreferencesMedia::refreshSettings()
 
 	ui->auto_recalculate_thumbnails->setChecked(prefs.auto_recalculate_thumbnails);
 
-	ui->connectGooglePhotos->setEnabled(GooglePhotosWrapper::instance()->isAuthenticated());
+	ui->connectGooglePhotos->setEnabled(!GooglePhotosWrapper::instance()->isAuthenticated());
 }
 
 void PreferencesMedia::syncSettings()

@@ -12,30 +12,30 @@
   Note: calling this a list view might be misleading?
 */
 
-#include <QTreeView>
+#include "core/subsurface-qt/divelistnotifier.h"
+#include "qt-models/divetripmodel.h"
 #include <QLineEdit>
 #include <QNetworkAccessManager>
-#include "qt-models/divetripmodel.h"
-#include "core/subsurface-qt/divelistnotifier.h"
+#include <QOAuth2AuthorizationCodeFlow>
+#include <QTreeView>
 
-class DiveListView : public QTreeView {
+class DiveListView : public QTreeView
+{
 	Q_OBJECT
 public:
 	DiveListView(QWidget *parent = 0);
 	~DiveListView();
 	void setSortOrder(int i, Qt::SortOrder order); // Call to set sort order
-	void reload(); // Call to reload model data
+	void reload();				       // Call to reload model data
 	static QString lastUsedImageDir();
 	static void updateLastUsedImageDir(const QString &s);
 	void loadImages();
 	void loadWebImages();
 signals:
 	void divesSelected();
-public
-slots:
+public slots:
 	void reloadHeaderActions();
-private
-slots:
+private slots:
 	void toggleColumnVisibilityByIndex();
 	void sortIndicatorChanged(int index, Qt::SortOrder order);
 	void removeFromTrip();
@@ -54,6 +54,8 @@ slots:
 	void diveSelectionChanged(const QVector<QModelIndex> &indices);
 	void currentDiveChanged(QModelIndex index);
 	void tripChanged(dive_trip *trip, TripField);
+	void loadWebImagesFromGooglePhotos();
+
 private:
 	void rowsInserted(const QModelIndex &parent, int start, int end) override;
 	void reset() override;
@@ -69,7 +71,7 @@ private:
 	// Remember the initial column widths, to avoid writing unchanged widths to the settings
 	QVector<int> initialColumnWidths;
 
-	void resetModel();	// Call after model changed
+	void resetModel(); // Call after model changed
 	void merge_trip(const QModelIndex &a, const int offset);
 	void setColumnWidths();
 	void calculateInitialColumnWidth(int col);

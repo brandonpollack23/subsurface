@@ -6,6 +6,17 @@
 
 #include <QOAuth2AuthorizationCodeFlow>
 
+class GooglePhotosList
+{
+public:
+	GooglePhotosList(QJsonArray photos);
+
+	// TODO NOW
+	// make iterator that autofetches continuations.
+private:
+	QJsonArray photos;
+};
+
 class GooglePhotosWrapper : public QObject
 {
 	Q_OBJECT
@@ -14,7 +25,7 @@ public:
 	static GooglePhotosWrapper *instance();
 	GooglePhotosWrapper(QObject *parent = nullptr);
 
-	QNetworkReply *requestPhotosFromTimespan(QDateTime startDateTime, QDateTime endDateTime);
+	GooglePhotosList requestPhotosFromTimespan(QDateTime startDateTime, QDateTime endDateTime);
 
 public slots:
 	void grantAuthentication();
@@ -23,9 +34,14 @@ signals:
 	void authenticated();
 	void authenticationFailed();
 
+	void replied();
+
 public:
 	bool isAuthenticated() const;
 	const QString token() const;
+
+private:
+	void prepareRequest(QNetworkRequest *request, QUrl url);
 
 private:
 	static GooglePhotosWrapper *m_instance;

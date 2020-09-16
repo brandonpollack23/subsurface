@@ -1,27 +1,27 @@
 // SPDX-License-Identifier: GPL-2.0
 #include "qt-models/divepicturemodel.h"
+#include "commands/command.h"
 #include "core/divelist.h" // for comp_dives
-#include "core/metrics.h"
 #include "core/imagedownloader.h"
+#include "core/metrics.h"
 #include "core/picture.h"
 #include "core/qthelper.h"
 #include "core/subsurface-qt/divelistnotifier.h"
-#include "commands/command.h"
 
 #include <QFileInfo>
 #include <QPainter>
 
 PictureEntry::PictureEntry(dive *dIn, const PictureObj &p) : d(dIn),
-	filename(p.filename),
-	offsetSeconds(p.offset.seconds),
-	length({ 0 })
+							     filename(p.filename),
+							     offsetSeconds(p.offset.seconds),
+							     length({0})
 {
 }
 
 PictureEntry::PictureEntry(dive *dIn, const picture &p) : d(dIn),
-	filename(p.filename),
-	offsetSeconds(p.offset.seconds),
-	length({ 0 })
+							  filename(p.filename),
+							  offsetSeconds(p.offset.seconds),
+							  length({0})
 {
 }
 
@@ -75,7 +75,7 @@ void DivePictureModel::updateZoom()
 void DivePictureModel::updateThumbnails()
 {
 	updateZoom();
-	for (PictureEntry &entry: pictures)
+	for (PictureEntry &entry : pictures)
 		entry.image = Thumbnailer::instance()->fetchThumbnail(QString::fromStdString(entry.filename), false);
 }
 
@@ -93,7 +93,7 @@ void DivePictureModel::updateDivePictures()
 		if (dive->selected) {
 			size_t first = pictures.size();
 			FOR_EACH_PICTURE(dive)
-				pictures.push_back(PictureEntry(dive, *picture));
+			pictures.push_back(PictureEntry(dive, *picture));
 
 			// Sort pictures of this dive by offset.
 			// Thus, the list will be sorted by (dive, offset).
@@ -106,7 +106,7 @@ void DivePictureModel::updateDivePictures()
 	endResetModel();
 }
 
-int DivePictureModel::columnCount(const QModelIndex&) const
+int DivePictureModel::columnCount(const QModelIndex &) const
 {
 	return 2;
 }
@@ -145,17 +145,16 @@ void DivePictureModel::removePictures(const QModelIndexList &indices)
 {
 	// Collect pictures to remove by dive
 	std::vector<Command::PictureListForDeletion> pics;
-	for (const QModelIndex &idx: indices) {
+	for (const QModelIndex &idx : indices) {
 		if (!idx.isValid())
 			continue;
 		const PictureEntry &item = pictures[idx.row()];
 		// Check if we already have pictures for that dive.
 		auto it = find_if(pics.begin(), pics.end(),
-				  [&item](const Command::PictureListForDeletion &list)
-				  { return list.d == item.d; });
+				  [&item](const Command::PictureListForDeletion &list) { return list.d == item.d; });
 		// If not found, add a new list
 		if (it == pics.end())
-			pics.push_back({ item.d, { item.filename }});
+			pics.push_back({item.d, {item.filename}});
 		else
 			it->filenames.push_back(item.filename);
 	}
@@ -168,7 +167,7 @@ void DivePictureModel::picturesRemoved(dive *d, QVector<QString> filenamesIn)
 	std::vector<std::string> filenames;
 	filenames.reserve(filenamesIn.size());
 	std::transform(filenamesIn.begin(), filenamesIn.end(), std::back_inserter(filenames),
-		       [] (const QString &s) { return s.toStdString(); });
+		       [](const QString &s) { return s.toStdString(); });
 
 	// Get range of pictures of the given dive.
 	// Note: we could be more efficient by either using a binary search or a two-level data structure.
@@ -238,7 +237,7 @@ void DivePictureModel::picturesAdded(dive *d, QVector<PictureObj> picsIn)
 	}
 }
 
-int DivePictureModel::rowCount(const QModelIndex&) const
+int DivePictureModel::rowCount(const QModelIndex &) const
 {
 	return (int)pictures.size();
 }
@@ -257,11 +256,8 @@ static void addDurationToThumbnail(QImage &img, duration_t duration)
 	if (seconds < 0)
 		return;
 	QString s = seconds >= 3600 ?
-		QStringLiteral("%1:%2:%3").arg(seconds / 3600, 2, 10, QChar('0'))
-					  .arg((seconds % 3600) / 60, 2, 10, QChar('0'))
-					  .arg(seconds % 60, 2, 10, QChar('0')) :
-		QStringLiteral("%1:%2").arg(seconds / 60, 2, 10, QChar('0'))
-				       .arg(seconds % 60, 2, 10, QChar('0'));
+			    QStringLiteral("%1:%2:%3").arg(seconds / 3600, 2, 10, QChar('0')).arg((seconds % 3600) / 60, 2, 10, QChar('0')).arg(seconds % 60, 2, 10, QChar('0')) :
+			    QStringLiteral("%1:%2").arg(seconds / 60, 2, 10, QChar('0')).arg(seconds % 60, 2, 10, QChar('0'));
 
 	QFont font(system_divelist_default_font, 30);
 	QFontMetrics metrics(font);
@@ -283,7 +279,7 @@ void DivePictureModel::updateThumbnail(QString filename, QImage thumbnail, durat
 	int i = findPictureId(filename.toStdString());
 	if (i >= 0) {
 		if (duration.seconds > 0) {
-			addDurationToThumbnail(thumbnail, duration);	// If we know the duration paint it on top of the thumbnail
+			addDurationToThumbnail(thumbnail, duration); // If we know the duration paint it on top of the thumbnail
 			pictures[i].length = duration;
 		}
 		pictures[i].image = thumbnail;
